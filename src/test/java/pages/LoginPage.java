@@ -11,13 +11,14 @@ public class LoginPage {
     private WebDriver driver;
     private WebDriverWait wait;
 
-    private By btnMiCuenta = By.xpath("//div[contains(@class, 'icon-profile-login-custom')]");
-    private By inputEmail = By.xpath("//input[contains(@placeholder, 'ejemplo@mail.com')]");
-    private By inputPass = By.cssSelector("input[type='password'][class*='vtex-styleguide-9-x-input']");
+    private By btnMiCuenta = By.xpath("//div[contains(@class, 'login')] | //div[contains(@class, 'icon-profile')] | //*[contains(@class, 'vtex-login')]//button");
+    private By inputEmail = By.xpath("//input[contains(@placeholder, 'mail') or contains(@type, 'email') or contains(@name, 'email')]");
+    private By inputPass = By.xpath("//input[@type='password']");
     private By checkboxTerms = By.name("chck_terms_cond");
     
     // Selectores más robustos para el botón de Submit
-    private By btnSubmit = By.xpath("//button[contains(@class, 'vtex-login-2-x-sendButton')] | //button[@type='submit']");
+    private By btnSubmitEmailFlow = By.xpath("//div[contains(@class, 'vtex-login-2-x-button')]//button[.//span[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'e-mail') or contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'correo')]]");
+    private By btnSubmit = By.xpath("//div[contains(@class, 'sendButton')]//button | //button[contains(@class, 'sendButton')] | //button[@type='submit' and //span[contains(text(), 'Entrar') or contains(text(), 'Ingresar') or contains(text(), 'Acceder')]] | //div[contains(@class, 'login')]//button[@type='submit'] | //span[text()='Entrar']/parent::button");
     private By btnPopupCerrar = By.cssSelector("button[class*='close']");
     private By btnCerrarSesion = By.id("btn-fake-session-0");
 
@@ -44,6 +45,15 @@ public class LoginPage {
         // El email debe tener formato válido para que el botón de submit se habilite
         String emailToUse = user.contains("@") ? user : user + "@gmail.com";
         
+        // Por si hay un paso previo para elegir opción de "Ingresar con e-mail y contraseña"
+        try {
+            WebElement btnEmailFlow = wait.until(ExpectedConditions.visibilityOfElementLocated(btnSubmitEmailFlow));
+            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", btnEmailFlow);
+            Thread.sleep(1000);
+        } catch (Exception e) {
+            System.out.println("LOG: No habia boton para step previo de email flow, continuamos...");
+        }
+
         wait.until(ExpectedConditions.elementToBeClickable(inputEmail)).sendKeys(emailToUse);
         wait.until(ExpectedConditions.elementToBeClickable(inputPass)).sendKeys(pass);
 
@@ -56,8 +66,17 @@ public class LoginPage {
         }
 
         // Click en enviar con JS por si el botón está 'deshabilitado' visualmente por overlays
-        WebElement submit = wait.until(ExpectedConditions.elementToBeClickable(btnSubmit));
-        ((JavascriptExecutor) driver).executeScript("arguments[0].click();", submit);
+        try {
+            WebElement submit = wait.until(ExpectedConditions.elementToBeClickable(btnSubmit));
+            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", submit);
+        } catch (Exception e) {
+            try {
+                System.out.println("LOG: btnSubmit timeout. Dumping DOM...");
+                java.io.File domFile = new java.io.File("target/dom_dump.html");
+                java.nio.file.Files.write(domFile.toPath(), driver.getPageSource().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            } catch (Exception ex) {}
+            throw e;
+        }
         
         System.out.println("LOG: Intento de login enviado.");
     }

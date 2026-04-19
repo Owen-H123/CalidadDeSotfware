@@ -10,8 +10,8 @@ public class SearchPage {
     private WebDriver driver;
     private WebDriverWait wait;
 
-    private By inputSearch = By.xpath("//input[contains(@placeholder, '¿Qué buscas?')]");
-    private By btnAgregar = By.xpath("(//span[text()='Agregar'])[1]/parent::button");
+    private By inputSearch = By.xpath("//input[@id='search-autocomplete-input' or @type='text' and (contains(@class,'searchbar') or contains(@class,'Search') or contains(@placeholder, 'buscar') or contains(@placeholder, 'busca') or contains(@placeholder, 'Qué'))]");
+    private By btnAgregar = By.xpath("(//button[contains(@class, 'add-to-cart')] | //div[contains(@class, 'buyButton')]//button | //button[.//span[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'agregar') or contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'añadir')]])[1]");
 
     public SearchPage(WebDriver driver, WebDriverWait wait) {
         this.driver = driver;
@@ -19,10 +19,22 @@ public class SearchPage {
     }
 
     public void buscar(String producto) {
-        wait.until(ExpectedConditions.elementToBeClickable(inputSearch)).sendKeys(producto + Keys.ENTER);
+        org.openqa.selenium.WebElement input = wait.until(ExpectedConditions.elementToBeClickable(inputSearch));
+        input.clear();
+        input.sendKeys(producto);
+        try { Thread.sleep(1000); } catch (Exception e) {}
+        input.sendKeys(Keys.ENTER);
     }
 
     public void agregarAlCarrito() {
-        wait.until(ExpectedConditions.elementToBeClickable(btnAgregar)).click();
+        try {
+            wait.until(ExpectedConditions.elementToBeClickable(btnAgregar)).click();
+        } catch (Exception e) {
+            System.out.println("LOG: btnAgregar no encontrado. Dumping DOM...");
+            try {
+                java.nio.file.Files.writeString(java.nio.file.Paths.get("target/dom_search_dump.html"), driver.getPageSource());
+            } catch (Exception ex) {}
+            throw e;
+        }
     }
 }
